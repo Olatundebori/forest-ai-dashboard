@@ -20,19 +20,19 @@ df = pd.read_csv(uploaded)
 df.columns = df.columns.str.strip().str.replace(" ", "")
 df = df.dropna(subset=["Dbh(cm)", "Ht(m)", "TreeSpecies"])
 
-# Convert columns to numeric that might be needed for EDA and predictions
+# Convert to numeric where needed
 for col in ["Db(m)", "Dbh(cm)", "Dt(m)", "Dm(m)", "Ht(m)", "Density"]:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
-# Optional: Remove outliers based on IQR for Dbh and Ht
-for col in ["Dbh(cm)", "Ht(m)"]:
+# Remove outliers based on IQR 
+for col in ["Dbh(cm)", "Ht(m)", "Db(m)", "Dt(m)", "Dm(m)"]:
     if col in df.columns:
         q1, q3 = df[col].quantile([0.25, 0.75])
         iqr = q3 - q1
         df = df[(df[col] >= q1 - 1.5 * iqr) & (df[col] <= q3 + 1.5 * iqr)]
 
-# Feature engineering for EDA and calculations
+# Feature engineering
 if all(x in df.columns for x in ["Dbh(cm)", "Ht(m)"]):
     df["Basal_Area(m2)"] = math.pi * (df["Dbh(cm)"] / 200) ** 2
 else:
@@ -49,13 +49,12 @@ if "Density" in df.columns:
     df["Density_kg_m3"] = df["Density"] * 1000
 else:
     df["Density_kg_m3"] = np.nan
-
 df["Carbon(kg)"] = df["Volume(m3)"] * df["Density_kg_m3"] * 0.5
 
 # Exploratory Data Analysis
 st.header("Exploratory Data Analysis")
 
-# Height distribution bar plot (binned)
+# Height distribution bar plot
 if "Ht(m)" in df.columns:
     height_bins = [0, 5, 10, 15, 20, 25, 30, 40]
     height_labels = ["0-5", "5-10", "10-15", "15-20", "20-25", "25-30", "30-40"]
@@ -63,12 +62,12 @@ if "Ht(m)" in df.columns:
     height_counts = df["Height_Class"].value_counts().sort_index()
     fig, ax = plt.subplots(figsize=(8, 4))
     height_counts.plot(kind="bar", ax=ax, color="forestgreen")
-    ax.set_title("Tree Height Distribution (Binned)")
+    ax.set_title("Tree Height Distribution")
     ax.set_xlabel("Height Class (m)")
     ax.set_ylabel("Count")
     st.pyplot(fig)
 
-# DBH line graph using histogram bins
+# Diameter distribution line graph
 if "Dbh(cm)" in df.columns:
     bin_edges = np.histogram_bin_edges(df["Dbh(cm)"], bins=30)
     hist_counts, _ = np.histogram(df["Dbh(cm)"], bins=bin_edges)
@@ -82,13 +81,24 @@ if "Dbh(cm)" in df.columns:
     fig.tight_layout()
     st.pyplot(fig)
 
-# Correlation matrix of relevant numeric variables
+# Correlation matrix heatmap
 num_cols = [col for col in ["Dbh(cm)", "Ht(m)", "Basal_Area(m2)", "Volume(m3)", "Density", "Carbon(kg)"] if col in df.columns]
 if len(num_cols) >= 2:
     corr = df[num_cols].corr()
     fig, ax = plt.subplots(figsize=(6, 5))
     sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
     ax.set_title("Correlation Matrix")
+    st.pyplot(fig)
+
+# Tree Species Distribution Bar Plot (before prediction)
+if "TreeSpecies" in df.columns:
+    species_counts = df["TreeSpecies"].value_counts()
+    fig, ax = plt.subplots(figsize=(10, 4))
+    species_counts.plot(kind="bar", ax=ax, color="cornflowerblue")
+    ax.set_title("Tree Species Distribution (Counts)")
+    ax.set_xlabel("Tree Species")
+    ax.set_ylabel("Number of Trees")
+    ax.tick_params(axis='x', rotation=45)
     st.pyplot(fig)
 
 # Shannon diversity index calculation
@@ -109,10 +119,7 @@ try:
     loaded_obj = joblib.load("best_carbon_model.joblib")
     best_model = loaded_obj['model']  # actual trained sklearn model
     
-    # Use features from the saved dict if available, else default to specified list
     feature_columns = loaded_obj.get('features', ["Db(m)", "Dbh(cm)", "Dt(m)", "Dm(m)", "Ht(m)"])
-    
-    # Convert features to numeric and drop rows with missing values
     for col in feature_columns:
         if col not in df.columns:
             st.error(f"Expected feature column missing for prediction: {col}")
@@ -125,6 +132,17 @@ try:
     df.loc[X_pred.index, "Carbon_Predicted(kg)"] = carbon_pred
     
     st.success("Best carbon prediction model loaded and applied successfully.")
+
+    # Tree Species Contribution to Total Predicted Carbon (after prediction)
+    if "TreeSpecies" in df.columns:
+        species_carbon = df.groupby("TreeSpecies")["Carbon_Predicted(kg)"].sum().sort_values(ascending=False)
+        fig, ax = plt.subplots(figsize=(10, 4))
+        species_carbon.plot(kind="bar", ax=ax, color="darkgreen")
+        ax.set_title("Tree Species Contribution to Total Predicted Carbon")
+        ax.set_xlabel("Tree Species")
+        ax.set_ylabel("Total Predicted Carbon (kg)")
+        ax.tick_params(axis='x', rotation=45)
+        st.pyplot(fig)
     
 except Exception as e:
     st.warning(f"Could not load or use the best carbon prediction model: {e}")
