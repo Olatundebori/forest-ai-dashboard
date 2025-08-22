@@ -90,16 +90,30 @@ if len(num_cols) >= 2:
     ax.set_title("Correlation Matrix")
     st.pyplot(fig)
 
-# Tree Species Distribution Bar Plot (before prediction)
+# Tree Species Distribution Bar Plot with top 20 only if more species
 if "TreeSpecies" in df.columns:
     species_counts = df["TreeSpecies"].value_counts()
-    fig, ax = plt.subplots(figsize=(10, 4))
-    species_counts.plot(kind="bar", ax=ax, color="cornflowerblue")
-    ax.set_title("Tree Species Distribution (Counts)")
-    ax.set_xlabel("Tree Species")
-    ax.set_ylabel("Number of Trees")
-    ax.tick_params(axis='x', rotation=45)
-    st.pyplot(fig)
+    st.subheader("Tree Species Frequency Bar Plot (Top 20 if more than 20 species)")
+    if species_counts.shape[0] > 20:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        species_counts.head(20).plot(kind="bar", ax=ax, color="cornflowerblue")
+        ax.set_title("Top 20 Tree Species by Count")
+        ax.set_xlabel("Tree Species")
+        ax.set_ylabel("Number of Trees")
+        ax.tick_params(axis='x', rotation=45)
+        st.pyplot(fig)
+    else:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        species_counts.plot(kind="bar", ax=ax, color="cornflowerblue")
+        ax.set_title("Tree Species by Count")
+        ax.set_xlabel("Tree Species")
+        ax.set_ylabel("Number of Trees")
+        ax.tick_params(axis='x', rotation=45)
+        st.pyplot(fig)
+    # Full species frequency table
+    st.subheader("Full Tree Species Frequency Table")
+    freq_df = pd.DataFrame({"TreeSpecies": species_counts.index, "Count": species_counts.values})
+    st.dataframe(freq_df)
 
 # Shannon diversity index calculation
 def shannon(series):
@@ -107,7 +121,6 @@ def shannon(series):
     vals = np.array(list(cnts.values()))
     props = vals / vals.sum()
     return -np.sum(props * np.log(props))
-
 if "ForestId" in df.columns and df["ForestId"].notnull().any():
     div_forest = df.groupby("ForestId")["TreeSpecies"].apply(shannon).reset_index(name="Shannon_Index")
 else:
@@ -118,32 +131,33 @@ else:
 try:
     loaded_obj = joblib.load("best_carbon_model.joblib")
     best_model = loaded_obj['model']  # actual trained sklearn model
-    
     feature_columns = loaded_obj.get('features', ["Db(m)", "Dbh(cm)", "Dt(m)", "Dm(m)", "Ht(m)"])
     for col in feature_columns:
         if col not in df.columns:
             st.error(f"Expected feature column missing for prediction: {col}")
             st.stop()
         df[col] = pd.to_numeric(df[col], errors="coerce")
-        
     X_pred = df[feature_columns].dropna()
-    
     carbon_pred = best_model.predict(X_pred)
     df.loc[X_pred.index, "Carbon_Predicted(kg)"] = carbon_pred
-    
     st.success("Best carbon prediction model loaded and applied successfully.")
-
-    # Tree Species Contribution to Total Predicted Carbon (after prediction)
+    
+    # Tree Species Contribution to Total Predicted Carbon Table and Plot (Top 20)
     if "TreeSpecies" in df.columns:
         species_carbon = df.groupby("TreeSpecies")["Carbon_Predicted(kg)"].sum().sort_values(ascending=False)
-        fig, ax = plt.subplots(figsize=(10, 4))
-        species_carbon.plot(kind="bar", ax=ax, color="darkgreen")
-        ax.set_title("Tree Species Contribution to Total Predicted Carbon")
+        st.subheader("Tree Species Contribution to Total Predicted Carbon - Table")
+        carbon_table = pd.DataFrame({"TreeSpecies": species_carbon.index, "Total Predicted Carbon (kg)": species_carbon.values})
+        st.dataframe(carbon_table)
+        
+        st.subheader("Tree Species Contribution to Total Predicted Carbon - Top 20 Plot")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        species_carbon.head(20).plot(kind="bar", ax=ax, color="darkgreen")
+        ax.set_title("Top 20 Tree Species Contribution to Total Predicted Carbon")
         ax.set_xlabel("Tree Species")
         ax.set_ylabel("Total Predicted Carbon (kg)")
         ax.tick_params(axis='x', rotation=45)
         st.pyplot(fig)
-    
+
 except Exception as e:
     st.warning(f"Could not load or use the best carbon prediction model: {e}")
     df["Carbon_Predicted(kg)"] = np.nan
