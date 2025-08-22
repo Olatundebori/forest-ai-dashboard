@@ -67,18 +67,19 @@ if "Ht(m)" in df.columns:
     ax.set_ylabel("Count")
     st.pyplot(fig)
 
-# Diameter distribution line graph
+# DBH diameter class bar plot (binned)
 if "Dbh(cm)" in df.columns:
-    bin_edges = np.histogram_bin_edges(df["Dbh(cm)"], bins=30)
-    hist_counts, _ = np.histogram(df["Dbh(cm)"], bins=bin_edges)
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(bin_centers, hist_counts, marker="o", linestyle="-")
-    ax.set_title("Diameter Distribution (cm)")
-    ax.set_xlabel("Diameter (cm)")
-    ax.set_ylabel("Frequency")
-    ax.grid(True, linestyle="--", alpha=0.6)
-    fig.tight_layout()
+    size_bins = [0, 10, 20, 30, 40, 50, 100, 150]
+    size_labels = ["0-10", "10-20", "20-30", "30-40", "40-50", "50-100", "100-150"]
+    df['DBH_Class'] = pd.cut(df['Dbh(cm)'], bins=size_bins, labels=size_labels, right=False)
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.countplot(x='DBH_Class', data=df, palette='Greens', ax=ax)
+    ax.set_title('Tree Size Class Distribution by DBH')
+    ax.set_xlabel('DBH Class (cm)')
+    ax.set_ylabel('Count')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
     st.pyplot(fig)
 
 # Correlation matrix heatmap
@@ -121,6 +122,7 @@ def shannon(series):
     vals = np.array(list(cnts.values()))
     props = vals / vals.sum()
     return -np.sum(props * np.log(props))
+
 if "ForestId" in df.columns and df["ForestId"].notnull().any():
     div_forest = df.groupby("ForestId")["TreeSpecies"].apply(shannon).reset_index(name="Shannon_Index")
 else:
@@ -157,7 +159,6 @@ try:
         ax.set_ylabel("Total Predicted Carbon (kg)")
         ax.tick_params(axis='x', rotation=45)
         st.pyplot(fig)
-
 except Exception as e:
     st.warning(f"Could not load or use the best carbon prediction model: {e}")
     df["Carbon_Predicted(kg)"] = np.nan
