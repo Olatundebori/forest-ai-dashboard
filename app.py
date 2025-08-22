@@ -75,7 +75,7 @@ if "Dbh(cm)" in df.columns:
     
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.countplot(x='DBH_Class', data=df, palette='Greens', ax=ax)
-    ax.set_title('Tree Size Class Distribution by DBH')
+    ax.set_title('Tree Diameter Distribution')
     ax.set_xlabel('DBH Class (cm)')
     ax.set_ylabel('Count')
     plt.xticks(rotation=45)
