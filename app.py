@@ -147,14 +147,14 @@ try:
     # Tree Species Contribution to Total Predicted Carbon Table and Plot (Top 20)
     if "TreeSpecies" in df.columns:
         species_carbon = df.groupby("TreeSpecies")["Carbon_Predicted(kg)"].sum().sort_values(ascending=False)
-        st.subheader("Tree Species Contribution to Total Predicted Carbon - Table")
+        st.subheader("Tree Species Contribution to Predicted Carbon - Table")
         carbon_table = pd.DataFrame({"TreeSpecies": species_carbon.index, "Total Predicted Carbon (kg)": species_carbon.values})
         st.dataframe(carbon_table)
         
         st.subheader("Tree Species Contribution to Total Predicted Carbon - Top 20 Plot")
         fig, ax = plt.subplots(figsize=(10, 5))
         species_carbon.head(20).plot(kind="bar", ax=ax, color="darkgreen")
-        ax.set_title("Top 20 Tree Species Contribution to Total Predicted Carbon")
+        ax.set_title("Top 20 Tree Species Contribution to Predicted Carbon")
         ax.set_xlabel("Tree Species")
         ax.set_ylabel("Total Predicted Carbon (kg)")
         ax.tick_params(axis='x', rotation=45)
