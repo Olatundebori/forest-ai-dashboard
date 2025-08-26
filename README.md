@@ -1,2 +1,1 @@
-Predicting Tree Species Diversity and Carbon Sequestration Using AI
-This project aims to develop AI-driven models for predicting carbon sequestration and to compute tree species diversity directly from species composition data using forest inventory data from Nigerian forests. 
+ This project develops AI models to predict carbon sequestration and to compute tree species diversity directly from forest inventory data collected in Nigerian forests. It also includes a model-based ordination of species composition using GLLVM (in R) to reveal hidden ecological gradients.
