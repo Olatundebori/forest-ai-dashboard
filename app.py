@@ -74,14 +74,14 @@ if "Dbh(cm)" in df.columns:
     df['DBH_Class'] = pd.cut(df['Dbh(cm)'], bins=size_bins, labels=size_labels, right=False)
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    sns.countplot(x='DBH_Class', data=df, palette='Greens', ax=ax)
+    sns.countplot(x='DBH_Class', data=df, color='blue', ax=ax)  # full blue bars
     ax.set_title('Tree Diameter Distribution')
     ax.set_xlabel('DBH Class (cm)')
     ax.set_ylabel('Count')
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
-
+    
 # Correlation matrix heatmap
 num_cols = [col for col in ["Dbh(cm)", "Ht(m)", "Basal_Area(m2)", "Volume(m3)", "Density", "Carbon(kg)"] if col in df.columns]
 if len(num_cols) >= 2:
@@ -94,11 +94,11 @@ if len(num_cols) >= 2:
 # Tree Species Distribution Bar Plot with top 20 only if more species
 if "TreeSpecies" in df.columns:
     species_counts = df["TreeSpecies"].value_counts()
-    st.subheader("Tree Species Frequency Bar Plot (Top 20 if more than 20 species)")
+    st.subheader("Tree Species Frequency ")
     if species_counts.shape[0] > 20:
         fig, ax = plt.subplots(figsize=(10, 5))
         species_counts.head(20).plot(kind="bar", ax=ax, color="cornflowerblue")
-        ax.set_title("Top 20 Tree Species by Count")
+        ax.set_title("Top 20 Tree Species")
         ax.set_xlabel("Tree Species")
         ax.set_ylabel("Number of Trees")
         ax.tick_params(axis='x', rotation=45)
@@ -112,7 +112,7 @@ if "TreeSpecies" in df.columns:
         ax.tick_params(axis='x', rotation=45)
         st.pyplot(fig)
     # Full species frequency table
-    st.subheader("Full Tree Species Frequency Table")
+    st.subheader("Tree Species Frequency Table")
     freq_df = pd.DataFrame({"TreeSpecies": species_counts.index, "Count": species_counts.values})
     st.dataframe(freq_df)
 
@@ -151,7 +151,7 @@ try:
         carbon_table = pd.DataFrame({"TreeSpecies": species_carbon.index, "Total Predicted Carbon (kg)": species_carbon.values})
         st.dataframe(carbon_table)
         
-        st.subheader("Tree Species Contribution to Total Predicted Carbon - Top 20 Plot")
+        st.subheader("Tree Species Contribution to Total Predicted Carbon")
         fig, ax = plt.subplots(figsize=(10, 5))
         species_carbon.head(20).plot(kind="bar", ax=ax, color="darkgreen")
         ax.set_title("Top 20 Tree Species Contribution to Predicted Carbon")
