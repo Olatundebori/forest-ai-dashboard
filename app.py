@@ -18,12 +18,16 @@ if not uploaded:
 # Load & clean data
 df = pd.read_csv(uploaded)
 df.columns = df.columns.str.strip().str.replace(" ", "")
-df = df.dropna(subset=["Dbh(cm)", "Ht(m)", "TreeSpecies"])
 
-# Convert to numeric where needed
-for col in ["Db(m)", "Dbh(cm)", "Dt(m)", "Dm(m)", "Ht(m)", "Density"]:
+# Convert columns to numeric and fill missing values with median
+numeric_cols = ["Dbh(cm)", "Ht(m)", "Db(m)", "Dt(m)", "Dm(m)", "Density"]
+for col in numeric_cols:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
+        median_val = df[col].median()
+        df[col].fillna(median_val, inplace=True)
+
+# Note: Removed dropna to retain all rows after median imputation
 
 # Remove outliers based on IQR 
 for col in ["Dbh(cm)", "Ht(m)", "Db(m)", "Dt(m)", "Dm(m)"]:
@@ -37,14 +41,12 @@ if all(x in df.columns for x in ["Dbh(cm)", "Ht(m)"]):
     df["Basal_Area(m2)"] = math.pi * (df["Dbh(cm)"] / 200) ** 2
 else:
     df["Basal_Area(m2)"] = np.nan
-
 if all(x in df.columns for x in ["Db(m)", "Dm(m)", "Dt(m)", "Ht(m)"]):
     df["Volume(m3)"] = math.pi * df["Ht(m)"] / 24 * (
         df["Db(m)"] ** 2 + 4 * df["Dm(m)"] ** 2 + df["Dt(m)"] ** 2
     )
 else:
     df["Volume(m3)"] = np.nan
-
 if "Density" in df.columns:
     df["Density_kg_m3"] = df["Density"] * 1000
 else:
@@ -62,9 +64,11 @@ if "Ht(m)" in df.columns:
     height_counts = df["Height_Class"].value_counts().sort_index()
     fig, ax = plt.subplots(figsize=(8, 4))
     height_counts.plot(kind="bar", ax=ax, color="forestgreen")
-    ax.set_title("Tree Height Distribution")
-    ax.set_xlabel("Height Class (m)")
-    ax.set_ylabel("Count")
+    ax.set_title("Tree Height Distribution", pad=15)
+    ax.set_xlabel("Height Class (m)", labelpad=10)
+    ax.set_ylabel("Count", labelpad=10)
+    ax.tick_params(axis='x', rotation=45)
+    plt.tight_layout()
     st.pyplot(fig)
 
 # DBH diameter class bar plot (binned)
@@ -74,21 +78,22 @@ if "Dbh(cm)" in df.columns:
     df['DBH_Class'] = pd.cut(df['Dbh(cm)'], bins=size_bins, labels=size_labels, right=False)
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    sns.countplot(x='DBH_Class', data=df, color='blue', ax=ax)  # full blue bars
-    ax.set_title('Tree Diameter Distribution')
-    ax.set_xlabel('DBH Class (cm)')
-    ax.set_ylabel('Count')
-    plt.xticks(rotation=45)
+    sns.countplot(x='DBH_Class', data=df, color='blue', ax=ax)
+    ax.set_title('Tree Diameter Distribution', pad=15)
+    ax.set_xlabel('DBH Class (cm)', labelpad=10)
+    ax.set_ylabel('Count', labelpad=10)
+    ax.tick_params(axis='x', rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
-    
+
 # Correlation matrix heatmap
 num_cols = [col for col in ["Dbh(cm)", "Ht(m)", "Basal_Area(m2)", "Volume(m3)", "Density", "Carbon(kg)"] if col in df.columns]
 if len(num_cols) >= 2:
     corr = df[num_cols].corr()
     fig, ax = plt.subplots(figsize=(6, 5))
     sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
-    ax.set_title("Correlation Matrix")
+    ax.set_title("Correlation Matrix", pad=15)
+    plt.tight_layout()
     st.pyplot(fig)
 
 # Tree Species Distribution Bar Plot with top 20 only if more species
@@ -98,18 +103,20 @@ if "TreeSpecies" in df.columns:
     if species_counts.shape[0] > 20:
         fig, ax = plt.subplots(figsize=(10, 5))
         species_counts.head(20).plot(kind="bar", ax=ax, color="cornflowerblue")
-        ax.set_title("Top 20 Tree Species")
-        ax.set_xlabel("Tree Species")
-        ax.set_ylabel("Number of Trees")
+        ax.set_title("Top 20 Tree Species", pad=15)
+        ax.set_xlabel("Tree Species", labelpad=10)
+        ax.set_ylabel("Number of Trees", labelpad=10)
         ax.tick_params(axis='x', rotation=45)
+        plt.tight_layout()
         st.pyplot(fig)
     else:
         fig, ax = plt.subplots(figsize=(10, 5))
         species_counts.plot(kind="bar", ax=ax, color="cornflowerblue")
-        ax.set_title("Tree Species by Count")
-        ax.set_xlabel("Tree Species")
-        ax.set_ylabel("Number of Trees")
+        ax.set_title("Tree Species by Count", pad=15)
+        ax.set_xlabel("Tree Species", labelpad=10)
+        ax.set_ylabel("Number of Trees", labelpad=10)
         ax.tick_params(axis='x', rotation=45)
+        plt.tight_layout()
         st.pyplot(fig)
     # Full species frequency table
     st.subheader("Tree Species Frequency Table")
@@ -132,7 +139,7 @@ else:
 # Load saved carbon prediction model and predict per individual tree
 try:
     loaded_obj = joblib.load("best_carbon_model.joblib")
-    best_model = loaded_obj['model']  # actual trained sklearn model
+    best_model = loaded_obj['model']
     feature_columns = loaded_obj.get('features', ["Db(m)", "Dbh(cm)", "Dt(m)", "Dm(m)", "Ht(m)"])
     for col in feature_columns:
         if col not in df.columns:
@@ -154,10 +161,11 @@ try:
         st.subheader("Tree Species Contribution to Total Predicted Carbon")
         fig, ax = plt.subplots(figsize=(10, 5))
         species_carbon.head(20).plot(kind="bar", ax=ax, color="darkgreen")
-        ax.set_title("Top 20 Tree Species Contribution to Predicted Carbon")
-        ax.set_xlabel("Tree Species")
-        ax.set_ylabel("Total Predicted Carbon (kg)")
+        ax.set_title("Top 20 Tree Species Contribution to Predicted Carbon", pad=15)
+        ax.set_xlabel("Tree Species", labelpad=10)
+        ax.set_ylabel("Total Predicted Carbon (kg)", labelpad=10)
         ax.tick_params(axis='x', rotation=45)
+        plt.tight_layout()
         st.pyplot(fig)
 except Exception as e:
     st.warning(f"Could not load or use the best carbon prediction model: {e}")
