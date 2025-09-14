@@ -27,8 +27,6 @@ for col in numeric_cols:
         median_val = df[col].median()
         df[col].fillna(median_val, inplace=True)
 
-# Note: Removed dropna to retain all rows after median imputation
-
 # Remove outliers based on IQR 
 for col in ["Dbh(cm)", "Ht(m)", "Db(m)", "Dt(m)", "Dm(m)"]:
     if col in df.columns:
